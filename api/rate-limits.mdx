@@ -1,0 +1,311 @@
+---
+title: 'Rate Limits'
+description: 'Understanding API rate limits and quotas for each pricing tier'
+icon: 'gauge'
+---
+
+## Overview
+
+Our API implements rate limiting to ensure fair usage and maintain service quality for all users. Rate limits vary based on your subscription tier.
+
+<Note>
+  Rate limits are enforced per API key. Exceeding your rate limit will result in a `429 Too Many Requests` response.
+</Note>
+
+## Pricing Tiers
+
+Choose the plan that best fits your needs:
+
+<CardGroup cols={3}>
+  <Card title="Community" icon="users" color="#10b981">
+    **Free**
+    
+    Perfect for testing and small projects
+    - 3,000 requests/month
+    - 2 requests/second
+  </Card>
+  
+  <Card title="Supporter" icon="rocket" color="#6366f1">
+    **$9/month**
+    
+    Ideal for growing applications
+    - 30,000 requests/month
+    - 10 requests/second
+  </Card>
+  
+  <Card title="Professional" icon="briefcase" color="#8b5cf6">
+    **$29/month**
+    
+    Built for business-critical apps
+    - 150,000 requests/month
+    - 25 requests/second
+  </Card>
+</CardGroup>
+
+## Detailed Plan Comparison
+
+### Community (Free)
+
+<ResponseField name="Price" type="string">
+  $0/month
+</ResponseField>
+
+<ResponseField name="Monthly Requests" type="string">
+  3,000 (100/day)
+</ResponseField>
+
+<ResponseField name="Rate Limit" type="string">
+  2 requests/second
+</ResponseField>
+
+<ResponseField name="Endpoints" type="array">
+  - `get-all-countries`
+  - `get-country-details`
+  - `get-all-states`
+  - `get-states-by-country`
+  - `get-cities-by-country`
+</ResponseField>
+
+<ResponseField name="Fields" type="array">
+  Basic fields only:
+  - name, id, iso2, iso3
+  - capital, currency, region
+  - emoji, latitude, longitude
+  - country_code, state_code
+</ResponseField>
+
+<ResponseField name="Features" type="object">
+  - **Domain Whitelisting:** Not required (open access)
+  - **Support:** Community forum & documentation
+  - **SLA:** Best effort
+</ResponseField>
+
+---
+
+### Supporter ($9/month)
+
+<ResponseField name="Price" type="string">
+  $9/month
+</ResponseField>
+
+<ResponseField name="Monthly Requests" type="string">
+  30,000 (1,000/day)
+</ResponseField>
+
+<ResponseField name="Rate Limit" type="string">
+  10 requests/second
+</ResponseField>
+
+<ResponseField name="Endpoints" type="array">
+  All Community endpoints plus:
+  - `get-state-details`
+  - `get-cities-by-state`
+  - 8 new region/search endpoints
+</ResponseField>
+
+<ResponseField name="Fields" type="array">
+  All basic fields plus:
+  - phonecode, currency_name, currency_symbol
+  - tld, native, nationality
+  - timezones, translations
+  - numeric_code, subregion, subregion_id
+  - region_id, emojiU, wikiDataId
+  - fips_code, type, level, parent_id
+</ResponseField>
+
+<ResponseField name="Features" type="object">
+  - **Domain Whitelisting:** Required (up to 3 domains)
+  - **Filtering & Sorting:** Basic filters and sorting
+  - **Priority Support:** Email support (48h response)
+  - **Analytics Dashboard:** Enhanced usage statistics
+  - **SLA:** 99.5% Uptime
+</ResponseField>
+
+---
+
+### Professional ($29/month)
+
+<ResponseField name="Price" type="string">
+  $29/month
+</ResponseField>
+
+<ResponseField name="Monthly Requests" type="string">
+  150,000 (5,000/day)
+</ResponseField>
+
+<ResponseField name="Rate Limit" type="string">
+  25 requests/second
+</ResponseField>
+
+<ResponseField name="Endpoints" type="array">
+  Everything from Supporter plus:
+  - 6 advanced geospatial endpoints
+  - Full GraphQL API access
+</ResponseField>
+
+<ResponseField name="Fields" type="array">
+  All fields from Supporter tier
+</ResponseField>
+
+<ResponseField name="Features" type="object">
+  - **GraphQL API:** Full GraphQL access for complex queries
+  - **Advanced Filtering:** Radius search, multi-field search, fuzzy search, complex sorting
+  - **Multiple API Keys:** Up to 5 keys for different projects/environments
+  - **Domain Whitelisting:** Up to 10 domains + IP whitelisting
+  - **Priority Support:** 24h response time
+  - **Advanced Analytics:** Detailed usage insights, endpoint performance, geographic patterns
+  - **SLA:** 99.9% Uptime
+</ResponseField>
+
+## Rate Limit Headers
+
+Every API response includes headers to help you track your usage:
+
+```http
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+X-RateLimit-Reset: 1640995200
+X-RateLimit-Monthly-Limit: 30000
+X-RateLimit-Monthly-Remaining: 29876
+```
+
+<ResponseField name="X-RateLimit-Limit" type="integer">
+  Maximum requests per second for your tier
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Remaining" type="integer">
+  Requests remaining in the current second
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Reset" type="integer">
+  Unix timestamp when the rate limit resets
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Monthly-Limit" type="integer">
+  Total monthly request quota for your tier
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Monthly-Remaining" type="integer">
+  Monthly requests remaining
+</ResponseField>
+
+## Handling Rate Limits
+
+When you exceed your rate limit, you'll receive a `429 Too Many Requests` response:
+
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Too many requests. Please retry after 1 second.",
+    "retry_after": 1
+  }
+}
+```
+
+### Best Practices
+
+<Steps>
+  <Step title="Implement Exponential Backoff">
+    When you receive a 429 response, wait before retrying. Double your wait time with each consecutive rate limit error.
+    
+    ```javascript
+    async function makeRequestWithRetry(url, options, maxRetries = 3) {
+      for (let i = 0; i < maxRetries; i++) {
+        const response = await fetch(url, options);
+        
+        if (response.status !== 429) {
+          return response;
+        }
+        
+        const waitTime = Math.pow(2, i) * 1000; // 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+      
+      throw new Error('Max retries exceeded');
+    }
+    ```
+  </Step>
+  
+  <Step title="Cache Responses">
+    Cache frequently requested data to reduce API calls. Geographic data like countries and states rarely changes.
+    
+    ```javascript
+    const cache = new Map();
+    const CACHE_TTL = 3600000; // 1 hour
+    
+    function getCached(key) {
+      const cached = cache.get(key);
+      if (cached && Date.now() - cached.time < CACHE_TTL) {
+        return cached.data;
+      }
+      return null;
+    }
+    ```
+  </Step>
+  
+  <Step title="Batch Requests">
+    When possible, use endpoints that return multiple resources instead of making individual requests.
+    
+    ```javascript
+    // Better: Get all states at once
+    const states = await fetch('/v1/countries/US/states');
+    
+    // Avoid: Multiple individual requests
+    for (const stateCode of stateCodes) {
+      const state = await fetch(`/v1/states/${stateCode}`);
+    }
+    ```
+  </Step>
+  
+  <Step title="Monitor Usage">
+    Track your API usage using the rate limit headers to stay within your quotas.
+    
+    ```javascript
+    function checkRateLimits(response) {
+      const remaining = response.headers.get('X-RateLimit-Monthly-Remaining');
+      const limit = response.headers.get('X-RateLimit-Monthly-Limit');
+      
+      const percentUsed = ((limit - remaining) / limit) * 100;
+      
+      if (percentUsed > 80) {
+        console.warn(`Warning: ${percentUsed}% of monthly quota used`);
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+## Upgrade Your Plan
+
+Need more requests or higher rate limits?
+
+<Card 
+  title="Upgrade to Professional" 
+  icon="rocket" 
+  href="https://dashboard.example.com/upgrade"
+>
+  Unlock advanced features, higher limits, and priority support
+</Card>
+
+## Questions?
+
+If you have questions about rate limits or need a custom plan for your specific needs:
+
+<CardGroup cols={2}>
+  <Card 
+    title="Contact Support" 
+    icon="message" 
+    href="mailto:support@example.com"
+  >
+    Our team is here to help
+  </Card>
+  
+  <Card 
+    title="Custom Plans" 
+    icon="sparkles" 
+    href="mailto:sales@example.com"
+  >
+    Need higher limits? Let's talk
+  </Card>
+</CardGroup>

@@ -1,0 +1,247 @@
+---
+title: 'Examples'
+description: 'Real-world examples and use cases for the Geographic API'
+icon: 'lightbulb'
+---
+
+## Quick Start Examples
+
+Learn how to use the Geographic API with these practical examples.
+
+<CardGroup cols={2}>
+  <Card title="Basic Country Lookup" icon="globe">
+    Get information about a specific country by ISO code
+  </Card>
+  <Card title="State & City Search" icon="map-location-dot">
+    Find all states in a country and cities within those states
+  </Card>
+  <Card title="Currency Information" icon="dollar-sign">
+    Retrieve currency details for international transactions
+  </Card>
+  <Card title="Timezone Data" icon="clock">
+    Get timezone information for scheduling applications
+  </Card>
+</CardGroup>
+
+## Common Use Cases
+
+### 1. Building a Country Selector
+
+A common use case is creating a dropdown selector for countries in a form:
+
+<CodeGroup>
+```javascript JavaScript
+// Fetch all countries
+const response = await fetch('https://api.example.com/v1/countries', {
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY'
+  }
+});
+
+const countries = await response.json();
+
+// Populate dropdown
+countries.forEach(country => {
+  const option = document.createElement('option');
+  option.value = country.iso2;
+  option.text = `${country.emoji} ${country.name}`;
+  dropdown.appendChild(option);
+});
+```
+
+```python Python
+import requests
+
+# Fetch all countries
+response = requests.get(
+    'https://api.example.com/v1/countries',
+    headers={'Authorization': 'Bearer YOUR_API_KEY'}
+)
+
+countries = response.json()
+
+# Format for display
+country_list = [
+    {'value': c['iso2'], 'label': f"{c['emoji']} {c['name']}"}
+    for c in countries
+]
+```
+
+```php PHP
+// Fetch all countries
+$ch = curl_init('https://api.example.com/v1/countries');
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer YOUR_API_KEY'
+]);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+$response = curl_exec($ch);
+$countries = json_decode($response, true);
+
+// Format for HTML select
+foreach ($countries as $country) {
+    echo "<option value='{$country['iso2']}'>";
+    echo "{$country['emoji']} {$country['name']}";
+    echo "</option>";
+}
+```
+</CodeGroup>
+
+### 2. Cascading Location Selectors
+
+Create dependent dropdowns for country → state → city selection:
+
+<Steps>
+  <Step title="Load Countries">
+    Fetch and display all countries in the first dropdown
+  </Step>
+  
+  <Step title="Load States on Country Selection">
+    When a country is selected, fetch its states using the country code
+    
+    ```javascript
+    const states = await fetch(`/v1/countries/${countryCode}/states`);
+    ```
+  </Step>
+  
+  <Step title="Load Cities on State Selection">
+    When a state is selected, fetch its cities
+    
+    ```javascript
+    const cities = await fetch(`/v1/states/${stateCode}/cities`);
+    ```
+  </Step>
+</Steps>
+
+### 3. Display Location with Local Information
+
+Show location details with currency and timezone:
+
+```javascript
+async function getLocationDetails(countryCode) {
+  const country = await fetch(`/v1/countries/${countryCode}`);
+  const data = await country.json();
+  
+  return {
+    name: data.name,
+    capital: data.capital,
+    currency: {
+      code: data.currency,
+      name: data.currency_name,
+      symbol: data.currency_symbol
+    },
+    timezone: data.timezones[0],
+    phone: data.phonecode,
+    emoji: data.emoji
+  };
+}
+```
+
+## Integration Patterns
+
+### Caching Strategy
+
+To optimize API usage and stay within rate limits:
+
+```javascript
+class GeoAPICache {
+  constructor() {
+    this.cache = new Map();
+    this.ttl = 3600000; // 1 hour in milliseconds
+  }
+  
+  async get(endpoint) {
+    const cached = this.cache.get(endpoint);
+    
+    if (cached && Date.now() - cached.timestamp < this.ttl) {
+      return cached.data;
+    }
+    
+    const response = await fetch(`https://api.example.com${endpoint}`, {
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    });
+    
+    const data = await response.json();
+    
+    this.cache.set(endpoint, {
+      data,
+      timestamp: Date.now()
+    });
+    
+    return data;
+  }
+}
+```
+
+### Error Handling
+
+Proper error handling for production applications:
+
+```javascript
+async function apiRequest(endpoint) {
+  try {
+    const response = await fetch(`https://api.example.com${endpoint}`, {
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      } else if (response.status === 401) {
+        throw new Error('Invalid API key. Please check your credentials.');
+      } else {
+        throw new Error(`API error: ${response.status}`);
+      }
+    }
+    
+    return await response.json();
+    
+  } catch (error) {
+    console.error('API request failed:', error);
+    // Implement fallback logic or user notification
+    throw error;
+  }
+}
+```
+
+## Sample Applications
+
+<CardGroup cols={2}>
+  <Card 
+    title="Address Form Validator" 
+    icon="check-circle"
+    href="https://github.com/example/address-validator"
+  >
+    Complete example of address validation using our API
+  </Card>
+  
+  <Card 
+    title="Shipping Calculator" 
+    icon="truck"
+    href="https://github.com/example/shipping-calculator"
+  >
+    Calculate shipping zones and rates based on geographic data
+  </Card>
+  
+  <Card 
+    title="Store Locator" 
+    icon="store"
+    href="https://github.com/example/store-locator"
+  >
+    Find nearest locations using city and state data
+  </Card>
+  
+  <Card 
+    title="International Checkout" 
+    icon="shopping-cart"
+    href="https://github.com/example/intl-checkout"
+  >
+    Multi-currency checkout with proper location validation
+  </Card>
+</CardGroup>
+
+## Need More Examples?
+
+<Note>
+  Have a specific use case in mind? [Contact our support team](mailto:support@example.com) and we'll help you implement it or add it to our examples.
+</Note>
